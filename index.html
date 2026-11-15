@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>司順瑋 Bernie｜AR 名片</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+    body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+    #ui {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      display: flex; justify-content: center;
+      padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      pointer-events: none;
+    }
+    #talk {
+      pointer-events: auto;
+      min-height: 48px; padding: 0 22px; border: 0; border-radius: 24px;
+      background: #e0814a; color: #10262d; font-size: 16px; font-weight: 700;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+      opacity: 0; transform: translateY(12px); transition: opacity .3s, transform .3s;
+    }
+    #talk.show { opacity: 1; transform: none; }
+    #talk:disabled { background: #b9a88f; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <button id="talk" type="button" disabled>👋 跟我打招呼</button>
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-assets>
+      <img id="av-idle" src="./avatar/idle.webp" crossorigin="anonymous">
+      <img id="av-talking" src="./avatar/talking.webp" crossorigin="anonymous">
+      <img id="av-greet" src="./avatar/greet.webp" crossorigin="anonymous">
+      <img id="av-greet-talking" src="./avatar/greet_talking.webp" crossorigin="anonymous">
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- Card coordinates: width = 1, height = 90/54 ≈ 1.667, centre = (0,0), +Z points out of the card. -->
+    <a-entity id="anchor" mindar-image-target="targetIndex: 0">
+      <!-- darken the printed portrait a little while the character is out -->
+      <a-plane id="dim" width="1" height="1.667" position="0 0 0.001"
+               material="color: #000; opacity: 0; transparent: true; shader: flat"></a-plane>
+
+      <!-- base point where the character stands -->
+      <a-entity id="base" position="0 -0.3 0">
+        <a-circle radius="0.32" scale="1 0.45 1" position="0 0 0.002"
+                  material="color: #000; opacity: 0.35; transparent: true; shader: flat"></a-circle>
+
+        <!-- yaw: turns around the card normal to face the viewer -->
+        <a-entity id="yaw" face-viewer>
+          <!-- tilt: stands the character up from the card -->
+          <a-entity id="tilt" rotation="90 0 0">
+            <a-entity id="pop" scale="0.001 0.001 0.001">
+              <a-image class="pose" data-pose="idle" src="#av-idle" width="0.9" height="1.122" position="0 0.561 0"
+                       material="transparent: true; shader: flat; side: double" visible="false"></a-image>
+              <a-image class="pose" data-pose="talking" src="#av-talking" width="0.9" height="1.122" position="0 0.561 0"
+                       material="transparent: true; shader: flat; side: double" visible="false"></a-image>
+              <a-image class="pose" data-pose="greet" src="#av-greet" width="0.9" height="1.122" position="0 0.561 0"
+                       material="transparent: true; shader: flat; side: double" visible="true"></a-image>
+              <a-image class="pose" data-pose="greet_talking" src="#av-greet-talking" width="0.9" height="1.122" position="0 0.561 0"
+                       material="transparent: true; shader: flat; side: double" visible="false"></a-image>
+            </a-entity>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    // ---------- 角色台詞（之後換成 Gemini Live 對話） ----------
+    const INTRO =
+      '嗨，我是司順瑋，也可以叫我 Bernie。' +
+      '我在做互動體驗和 AI 應用開發，喜歡用遊戲設計的思維，打造會回應你的互動體驗。' +
+      '想看更多作品，可以掃名片背面的 QR Code。';
+
+    // ---------- 讓角色站在名片上並轉向觀看者 ----------
+    // Yaw around the card normal (anchor +Z) toward the camera, then tilt the
+    // standee back so it faces the camera when viewed from above, but never
+    // lies flatter than MIN_STAND degrees.
+    const MIN_STAND = 30;
+    AFRAME.registerComponent('face-viewer', {
+      init() {
+        this.cam = new THREE.Vector3();
+        this.tilt = document.getElementById('tilt').object3D;
+        this.base = document.getElementById('base').object3D;
+      },
+      tick() {
+        const camera = this.el.sceneEl.camera;
+        if (!camera) return;
+        camera.getWorldPosition(this.cam);
+        this.base.worldToLocal(this.cam);           // camera in card space
+        const { x, y, z } = this.cam;
+        const yaw = Math.atan2(x, -y);              // 0 = viewer at the card's bottom edge
+        const elevation = Math.atan2(z, Math.hypot(x, y));
+        const stand = Math.max(THREE.MathUtils.degToRad(MIN_STAND), Math.PI / 2 - elevation);
+        this.el.object3D.rotation.set(0, 0, yaw);
+        this.tilt.rotation.set(stand, 0, 0);
+      }
+    });
+
+    // ---------- 狀態切換 ----------
+    const poses = [...document.querySelectorAll('.pose')];
+    let pose = 'greet';
+    function setPose(name) {
+      pose = name;
+      poses.forEach(p => p.setAttribute('visible', p.dataset.pose === name));
+    }
+
+    // ---------- 登場 / 退場 ----------
+    const anchor = document.getElementById('anchor');
+    const pop = document.getElementById('pop');
+    const dim = document.getElementById('dim');
+    const talkBtn = document.getElementById('talk');
+
+    anchor.addEventListener('targetFound', () => {
+      setPose(speaking ? 'greet_talking' : 'greet');
+      pop.removeAttribute('animation__out');
+      pop.setAttribute('animation__in', {
+        property: 'scale', from: '0.001 0.001 0.001', to: '1 1 1',
+        dur: 700, easing: 'easeOutElastic', elasticity: 500
+      });
+      dim.setAttribute('animation__dim', { property: 'material.opacity', to: 0.35, dur: 400 });
+      talkBtn.disabled = false;
+      talkBtn.classList.add('show');
+      // after the entrance, settle into the idle pose unless we're talking
+      clearTimeout(window.__settle);
+      window.__settle = setTimeout(() => { if (!speaking) setPose('idle'); }, 2500);
+    });
+
+    anchor.addEventListener('targetLost', () => {
+      pop.setAttribute('scale', '0.001 0.001 0.001');
+      dim.setAttribute('animation__dim', { property: 'material.opacity', to: 0, dur: 200 });
+      talkBtn.classList.remove('show');
+      talkBtn.disabled = true;
+      stopSpeaking();
+    });
+
+    // ---------- 說話：瀏覽器語音 + 嘴巴開合 ----------
+    let speaking = false;
+    let flap = null;
+
+    function pickVoice() {
+      const voices = speechSynthesis.getVoices();
+      return voices.find(v => /zh[-_]TW/i.test(v.lang))
+          || voices.find(v => /zh/i.test(v.lang))
+          || null;
+    }
+
+    function startFlap() {
+      let open = false;
+      clearInterval(flap);
+      flap = setInterval(() => {
+        open = !open;
+        setPose(open ? 'talking' : 'idle');
+      }, 140 + Math.random() * 60);
+    }
+
+    function stopSpeaking() {
+      speaking = false;
+      clearInterval(flap);
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      setPose('idle');
+      talkBtn.textContent = '👋 跟我打招呼';
+    }
+
+    talkBtn.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) { alert('這個瀏覽器不支援語音播放'); return; }
+      if (speaking) { stopSpeaking(); return; }
+      const u = new SpeechSynthesisUtterance(INTRO);
+      u.lang = 'zh-TW';
+      const v = pickVoice();
+      if (v) u.voice = v;
+      u.rate = 1.05;
+      u.onstart = () => { speaking = true; startFlap(); talkBtn.textContent = '■ 停止'; };
+      u.onend = u.onerror = () => stopSpeaking();
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    });
+    // some browsers load voices lazily
+    if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
+  </script>
+</body>
+</html>
