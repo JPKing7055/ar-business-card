@@ -4,7 +4,7 @@
 
 - 線上版：https://jpking7055.github.io/ar-business-card/
 - 技術：[MindAR](https://hiukim.github.io/mind-ar-js-doc/)（圖片追蹤）＋ A-Frame（three.js）
-- 目前進度：第一階段（純前端、GitHub Pages）。角色用瀏覽器內建語音自我介紹，嘴型跟著開合。
+- 目前進度：第一階段（純前端、GitHub Pages）。角色播放本人錄音自我介紹，嘴型依音量開合。
 - 下一階段：接上 Gemini Live，讓角色可以即時語音對話。
 
 | 正面（AR 辨識） | 背面（聯絡資訊） |
@@ -16,7 +16,7 @@
 1. 用手機相機掃名片正面的 QR Code。
 2. 開啟網頁、允許使用鏡頭。
 3. 把鏡頭對準名片正面，角色會從名片上彈出來。
-4. 按「跟我打招呼」，角色會語音自我介紹。
+4. 按「跟我打招呼」，角色會用本人的聲音自我介紹。
 
 正面 QR Code 先連到 `jpking7055.github.io/mySite/card.html`，再轉到這個專案。AR 網頁換網址時只要改那一頁，已經發出去的名片不用重印。
 
@@ -26,6 +26,9 @@
 index.html                 AR 頁面（MindAR + A-Frame）
 targets.mind               名片正面的辨識檔
 avatar/                    角色狀態圖（網頁用，WebP）
+audio/
+  intro.m4a                  自我介紹錄音（已裁切、音量標準化）
+  intro.json                 嘴型用的音量曲線（每 40ms 一格）
   idle / talking / greet / greet_talking
 design/                    名片與角色的原始素材
   portrait_source.png        低多邊形人像原圖（名片正面主視覺）
@@ -39,6 +42,7 @@ tools/                     重現素材的腳本
   make_qr.py                 產生 QR Code
   build_avatar.py            角色圖對齊、補嘴型、去背、輸出 WebP
   render_print.py            產生印刷圖、A4 PDF、MindAR 辨識圖
+  make_voice.py              錄音裁切、標準化，並算出嘴型音量曲線
 ```
 
 ## 製作流程
@@ -98,9 +102,11 @@ tools/                     重現素材的腳本
   - 腳下有一圈半透明陰影。
 - **重新辨識**：登場動畫用事件觸發，名片移出畫面再移回來時會重播。
 - **登場**：辨識到名片時，人像變暗、角色彈出（greet），約 2.5 秒後換成待機（idle）。名片移出畫面時角色消失。
-- **說話**：按鈕觸發瀏覽器語音（zh-TW），說話時在 idle／talking 之間切換做出嘴型。iPhone 必須由使用者點擊後才能播放聲音，所以做成按鈕。
+- **說話**：按鈕播放本人錄音 `audio/intro.m4a`，依播放時間查 `audio/intro.json` 的音量：有聲音時每 80ms 開合一次，停頓時閉嘴。iPhone 必須由使用者點擊後才能播放聲音，所以做成按鈕。錄音無法播放時，退回瀏覽器內建語音念 `INTRO`。
+- **為什麼預先算音量**：iPhone 上把聲音接進 Web Audio 即時分析，會受靜音開關影響而沒有聲音；預先算好就能用一般的 `<audio>` 播放。
+- **除錯**：網址加上 `?debug=1`，左上角顯示顯示狀態、縮放、站立／轉向角度、姿勢與圖片載入狀態，角色位置會有洋紅色小方塊。
 - **防抖**：`filterMinCF: 0.0001; filterBeta: 0.001`，減少追蹤抖動。
-- 自我介紹的內容在 `index.html` 的 `INTRO`。
+- 換錄音：`python tools/make_voice.py 新錄音.m4a`，會自動裁掉前後空白、標準化音量，並重算音量曲線。
 
 ### 7. 部署
 
@@ -125,6 +131,7 @@ pip install pillow numpy scipy reportlab opencv-python
 python tools/make_qr.py        # QR Code
 python tools/build_avatar.py   # 角色狀態圖
 python tools/render_print.py   # 印刷圖、A4 PDF、MindAR 辨識圖
+python tools/make_voice.py 錄音.m4a   # 自我介紹語音（需要 ffmpeg）
 ```
 
 `render_print.py` 需要 Noto Sans CJK TC 與 Inter 字型，路徑在檔案開頭的 `FONT_DIR`、`LATIN_DIR`。

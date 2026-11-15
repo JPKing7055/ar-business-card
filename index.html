@@ -89,7 +89,7 @@
   </a-scene>
 
   <script>
-    // ---------- 角色台詞（之後換成 Gemini Live 對話） ----------
+    // ---------- 備用台詞：錄音無法播放時，用瀏覽器內建語音念這段 ----------
     const INTRO =
       '嗨，我是司順瑋，也可以叫我 Bernie。' +
       '我在做互動體驗和 AI 應用開發，喜歡用遊戲設計的思維，打造會回應你的互動體驗。' +
@@ -190,49 +190,70 @@
       hideTimer = setTimeout(hideCharacter, HIDE_DELAY);
     });
 
-    // ---------- 說話：瀏覽器語音 + 嘴巴開合 ----------
+    // ---------- 說話：本人錄音 + 嘴巴依音量開合 ----------
+    // audio/intro.m4a 是錄音，audio/intro.json 是預先算好的音量曲線（tools/make_voice.py 產生）。
+    // 用一般的 <audio> 播放，依播放時間查音量決定張嘴或閉嘴。
+    // 錄音載入失敗時，退回瀏覽器內建語音念 INTRO。
     let speaking = false;
     let flap = null;
+    let raf = 0;
+    const voice = new Audio('./audio/intro.m4a');
+    voice.preload = 'auto';
+    voice.setAttribute('playsinline', '');
+    let envelope = null;
+    fetch('./audio/intro.json').then(r => r.ok ? r.json() : null).then(d => { envelope = d; }).catch(() => {});
 
-    function pickVoice() {
-      const voices = speechSynthesis.getVoices();
-      return voices.find(v => /zh[-_]TW/i.test(v.lang))
-          || voices.find(v => /zh/i.test(v.lang))
-          || null;
-    }
-
-    function startFlap() {
-      let open = false;
-      clearInterval(flap);
-      flap = setInterval(() => {
-        open = !open;
-        setPose(open ? 'talking' : 'idle');
-      }, 140 + Math.random() * 60);
+    function mouthLoop() {
+      if (!speaking) return;
+      const frameMs = envelope ? envelope.frameMs : 40;
+      const f = Math.floor(voice.currentTime * 1000 / frameMs);
+      const v = envelope ? (envelope.env[f] || 0) : 0.5;
+      // 有聲音時每 2 格（約 80ms）開合一次；停頓時閉嘴
+      const open = v > 0.3 && Math.floor(f / 2) % 2 === 0;
+      setPose(open ? 'talking' : 'idle');
+      raf = requestAnimationFrame(mouthLoop);
     }
 
     function stopSpeaking() {
       speaking = false;
+      cancelAnimationFrame(raf);
       clearInterval(flap);
+      voice.pause();
       if ('speechSynthesis' in window) speechSynthesis.cancel();
       setPose('idle');
       talkBtn.textContent = '👋 跟我打招呼';
     }
 
-    talkBtn.addEventListener('click', () => {
-      if (!('speechSynthesis' in window)) { alert('這個瀏覽器不支援語音播放'); return; }
-      if (speaking) { stopSpeaking(); return; }
+    function startSpeaking() {
+      speaking = true;
+      talkBtn.textContent = '■ 停止';
+    }
+
+    function speakFallback() {
+      if (!('speechSynthesis' in window)) { stopSpeaking(); return; }
       const u = new SpeechSynthesisUtterance(INTRO);
       u.lang = 'zh-TW';
-      const v = pickVoice();
-      if (v) u.voice = v;
       u.rate = 1.05;
-      u.onstart = () => { speaking = true; startFlap(); talkBtn.textContent = '■ 停止'; };
+      u.onstart = () => {
+        startSpeaking();
+        let open = false;
+        clearInterval(flap);
+        flap = setInterval(() => { open = !open; setPose(open ? 'talking' : 'idle'); }, 160);
+      };
       u.onend = u.onerror = () => stopSpeaking();
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
+    }
+
+    voice.addEventListener('ended', stopSpeaking);
+
+    talkBtn.addEventListener('click', () => {
+      if (speaking) { stopSpeaking(); return; }
+      voice.currentTime = 0;
+      voice.play()
+        .then(() => { startSpeaking(); mouthLoop(); })
+        .catch(() => speakFallback());
     });
-    // some browsers load voices lazily
-    if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
     // ---------- 除錯資訊：網址加上 ?debug=1 ----------
     if (new URLSearchParams(location.search).has('debug')) {
       const box = document.getElementById('debug');
