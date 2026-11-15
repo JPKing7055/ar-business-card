@@ -113,10 +113,13 @@
       },
       tick() {
         const camera = this.el.sceneEl.camera;
-        if (!camera) return;
+        if (!camera || !shown) return;              // 還沒辨識到名片時不計算
         camera.getWorldPosition(this.cam);
+        this.base.updateWorldMatrix(true, false);
         this.base.worldToLocal(this.cam);            // camera in card space
         const { x, y, z } = this.cam;
+        // 名片還沒定位時矩陣不可逆，會算出 NaN；NaN 一旦進入平滑值就永遠是 NaN，角色會整個消失
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return;
         const elevation = Math.atan2(z, Math.hypot(x, y));   // 90° = 正前方
         // 站起來的角度：正前方 0°（平貼），越斜越立，最多 90°
         const stand = THREE.MathUtils.clamp(Math.PI / 2 - elevation, 0, Math.PI / 2);
@@ -125,6 +128,8 @@
         // 觀看者在名片上緣那一側時（y > 0），不轉成背對，只做小幅度偏轉，避免 ±180° 來回跳
         const raw = y <= 0 ? Math.atan2(x, -y) : Math.atan2(x, y);
         const yaw = THREE.MathUtils.clamp(raw, -MAX_YAW, MAX_YAW) * lean;
+        if (!Number.isFinite(this.yaw)) this.yaw = yaw;
+        if (!Number.isFinite(this.stand)) this.stand = stand;
         this.yaw += (yaw - this.yaw) * SMOOTH;
         this.stand += (stand - this.stand) * SMOOTH;
         this.el.object3D.rotation.set(0, 0, this.yaw);
