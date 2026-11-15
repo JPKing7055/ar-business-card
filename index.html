@@ -33,7 +33,7 @@
   </div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001"
+    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10; warmupTolerance: 3"
     color-space="sRGB"
     renderer="colorManagement: true; physicallyCorrectLights: true"
     vr-mode-ui="enabled: false"
@@ -140,23 +140,43 @@
     const dim = document.getElementById('dim');
     const talkBtn = document.getElementById('talk');
 
-    anchor.addEventListener('targetFound', () => {
+    // 追蹤偶爾會短暫丟失又找回（光線、反光、手晃）。
+    // 丟失時先等 HIDE_DELAY 毫秒，真的找不到才收起角色；在這之內找回就不重播登場。
+    const HIDE_DELAY = 800;
+    let shown = false;
+    let hideTimer = null;
+
+    function showCharacter() {
+      shown = true;
       setPose(speaking ? 'talking' : 'greet');
-      pop.emit('popin');            // 每次重新辨識到都重播登場動畫
+      pop.object3D.scale.set(0.001, 0.001, 0.001);
+      pop.emit('popin');
+      // 保險：萬一動畫沒播，900ms 後直接把角色放到正常大小
+      setTimeout(() => { if (shown && pop.object3D.scale.x < 0.5) pop.object3D.scale.set(1, 1, 1); }, 900);
       dim.emit('dimon');
       talkBtn.disabled = false;
       talkBtn.classList.add('show');
-      // after the entrance, settle into the idle pose unless we're talking
       clearTimeout(window.__settle);
       window.__settle = setTimeout(() => { if (!speaking) setPose('idle'); }, 2500);
-    });
+    }
 
-    anchor.addEventListener('targetLost', () => {
+    function hideCharacter() {
+      shown = false;
       pop.object3D.scale.set(0.001, 0.001, 0.001);
       dim.emit('dimoff');
       talkBtn.classList.remove('show');
       talkBtn.disabled = true;
       stopSpeaking();
+    }
+
+    anchor.addEventListener('targetFound', () => {
+      clearTimeout(hideTimer);
+      if (!shown) showCharacter();
+    });
+
+    anchor.addEventListener('targetLost', () => {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(hideCharacter, HIDE_DELAY);
     });
 
     // ---------- 說話：瀏覽器語音 + 嘴巴開合 ----------
