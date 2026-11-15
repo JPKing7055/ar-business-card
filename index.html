@@ -7,7 +7,8 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+    /* 不要設背景色：MindAR 的鏡頭畫面在 z-index:-2，body 背景會把它蓋住，畫面就變全黑 */
+    html, body { margin: 0; height: 100%; overflow: hidden; }
     body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
     #ui {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
@@ -51,14 +52,14 @@
     <a-entity id="anchor" mindar-image-target="targetIndex: 0">
       <!-- darken the printed portrait a little while the character is out -->
       <a-plane id="dim" width="1" height="1.667" position="0 0 0.001"
-               material="color: #000; opacity: 0; transparent: true; shader: flat"
+               material="color: #000; opacity: 0; transparent: true; shader: flat; depthWrite: false"
                animation__on="property: material.opacity; to: 0.35; dur: 400; startEvents: dimon"
                animation__off="property: material.opacity; to: 0; dur: 200; startEvents: dimoff"></a-plane>
 
       <!-- base point where the character stands -->
-      <a-entity id="base" position="0 -0.3 0">
-        <a-circle radius="0.32" scale="1 0.45 1" position="0 0 0.002"
-                  material="color: #000; opacity: 0.35; transparent: true; shader: flat"></a-circle>
+      <a-entity id="base" position="0 -0.3 0.02">
+        <a-circle radius="0.32" scale="1 0.45 1" position="0 0 -0.015"
+                  material="color: #000; opacity: 0.35; transparent: true; shader: flat; depthWrite: false"></a-circle>
 
         <!-- yaw: turns around the card normal to face the viewer -->
         <a-entity id="yaw" face-viewer>
