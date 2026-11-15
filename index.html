@@ -51,7 +51,9 @@
     <a-entity id="anchor" mindar-image-target="targetIndex: 0">
       <!-- darken the printed portrait a little while the character is out -->
       <a-plane id="dim" width="1" height="1.667" position="0 0 0.001"
-               material="color: #000; opacity: 0; transparent: true; shader: flat"></a-plane>
+               material="color: #000; opacity: 0; transparent: true; shader: flat"
+               animation__on="property: material.opacity; to: 0.35; dur: 400; startEvents: dimon"
+               animation__off="property: material.opacity; to: 0; dur: 200; startEvents: dimoff"></a-plane>
 
       <!-- base point where the character stands -->
       <a-entity id="base" position="0 -0.3 0">
@@ -61,8 +63,9 @@
         <!-- yaw: turns around the card normal to face the viewer -->
         <a-entity id="yaw" face-viewer>
           <!-- tilt: stands the character up from the card -->
-          <a-entity id="tilt" rotation="90 0 0">
-            <a-entity id="pop" scale="0.001 0.001 0.001">
+          <a-entity id="tilt">
+            <a-entity id="pop" scale="0.001 0.001 0.001"
+                      animation__in="property: scale; from: 0.001 0.001 0.001; to: 1 1 1; dur: 700; easing: easeOutElastic; elasticity: 500; startEvents: popin">
               <a-image class="pose" data-pose="idle" src="#av-idle" width="0.9" height="1.122" position="0 0.561 0"
                        material="transparent: true; shader: flat; side: double" visible="false"></a-image>
               <a-image class="pose" data-pose="talking" src="#av-talking" width="0.9" height="1.122" position="0 0.561 0"
@@ -86,27 +89,39 @@
       '想看更多作品，可以掃名片背面的 QR Code。';
 
     // ---------- 讓角色站在名片上並轉向觀看者 ----------
-    // Yaw around the card normal (anchor +Z) toward the camera, then tilt the
-    // standee back so it faces the camera when viewed from above, but never
-    // lies flatter than MIN_STAND degrees.
-    const MIN_STAND = 30;
+    // 名片坐標：+Y = 名片上緣，+Z = 名片正面朝外。
+    // - 從正前方看（名片拿起來、或手機在名片正上方）：角色平貼在名片上，頭朝名片上緣，
+    //   就像一張正常的圖，不會倒過來。
+    // - 名片平放、從下緣斜斜看過去：角色以腳下為支點立起來，並稍微轉向觀看者。
+    // 轉向角度限制在 ±MAX_YAW，觀看者在名片上方時也不會整個轉成顛倒。
+    const MAX_YAW = THREE.MathUtils.degToRad(60);
+    const SMOOTH = 0.15;          // 0~1，越小越平滑
     AFRAME.registerComponent('face-viewer', {
       init() {
         this.cam = new THREE.Vector3();
         this.tilt = document.getElementById('tilt').object3D;
         this.base = document.getElementById('base').object3D;
+        this.yaw = 0;
+        this.stand = 0;
       },
       tick() {
         const camera = this.el.sceneEl.camera;
         if (!camera) return;
         camera.getWorldPosition(this.cam);
-        this.base.worldToLocal(this.cam);           // camera in card space
+        this.base.worldToLocal(this.cam);            // camera in card space
         const { x, y, z } = this.cam;
-        const yaw = Math.atan2(x, -y);              // 0 = viewer at the card's bottom edge
-        const elevation = Math.atan2(z, Math.hypot(x, y));
-        const stand = Math.max(THREE.MathUtils.degToRad(MIN_STAND), Math.PI / 2 - elevation);
-        this.el.object3D.rotation.set(0, 0, yaw);
-        this.tilt.rotation.set(stand, 0, 0);
+        const elevation = Math.atan2(z, Math.hypot(x, y));   // 90° = 正前方
+        // 站起來的角度：正前方 0°（平貼），越斜越立，最多 90°
+        const stand = THREE.MathUtils.clamp(Math.PI / 2 - elevation, 0, Math.PI / 2);
+        // 轉向：只有在斜看時才轉；正前方時 x, y 很小、方向不穩定，所以權重趨近 0
+        const lean = THREE.MathUtils.clamp((Math.PI / 2 - elevation) / (Math.PI / 3), 0, 1);
+        // 觀看者在名片上緣那一側時（y > 0），不轉成背對，只做小幅度偏轉，避免 ±180° 來回跳
+        const raw = y <= 0 ? Math.atan2(x, -y) : Math.atan2(x, y);
+        const yaw = THREE.MathUtils.clamp(raw, -MAX_YAW, MAX_YAW) * lean;
+        this.yaw += (yaw - this.yaw) * SMOOTH;
+        this.stand += (stand - this.stand) * SMOOTH;
+        this.el.object3D.rotation.set(0, 0, this.yaw);
+        this.tilt.rotation.set(this.stand, 0, 0);
       }
     });
 
@@ -125,13 +140,9 @@
     const talkBtn = document.getElementById('talk');
 
     anchor.addEventListener('targetFound', () => {
-      setPose(speaking ? 'greet_talking' : 'greet');
-      pop.removeAttribute('animation__out');
-      pop.setAttribute('animation__in', {
-        property: 'scale', from: '0.001 0.001 0.001', to: '1 1 1',
-        dur: 700, easing: 'easeOutElastic', elasticity: 500
-      });
-      dim.setAttribute('animation__dim', { property: 'material.opacity', to: 0.35, dur: 400 });
+      setPose(speaking ? 'talking' : 'greet');
+      pop.emit('popin');            // 每次重新辨識到都重播登場動畫
+      dim.emit('dimon');
       talkBtn.disabled = false;
       talkBtn.classList.add('show');
       // after the entrance, settle into the idle pose unless we're talking
@@ -140,8 +151,8 @@
     });
 
     anchor.addEventListener('targetLost', () => {
-      pop.setAttribute('scale', '0.001 0.001 0.001');
-      dim.setAttribute('animation__dim', { property: 'material.opacity', to: 0, dur: 200 });
+      pop.object3D.scale.set(0.001, 0.001, 0.001);
+      dim.emit('dimoff');
       talkBtn.classList.remove('show');
       talkBtn.disabled = true;
       stopSpeaking();
