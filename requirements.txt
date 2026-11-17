@@ -1,4 +1,4 @@
-# tools/ 底下素材腳本需要的套件
+# Packages for the asset scripts in tools/
 pillow
 numpy
 scipy
