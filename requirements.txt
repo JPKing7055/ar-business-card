@@ -1,0 +1,6 @@
+# tools/ 底下素材腳本需要的套件
+pillow
+numpy
+scipy
+reportlab
+opencv-python

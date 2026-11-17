@@ -127,7 +127,9 @@ npx serve .
 ## 重新產生素材
 
 ```bash
-pip install pillow numpy scipy reportlab opencv-python
+python -m venv .venv
+.venv\Scripts\Activate.ps1          # Windows PowerShell
+pip install -r requirements.txt
 python tools/make_qr.py        # QR Code
 python tools/build_avatar.py   # 角色狀態圖
 python tools/render_print.py   # 印刷圖、A4 PDF、MindAR 辨識圖
