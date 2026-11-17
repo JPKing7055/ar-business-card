@@ -1,3 +1,8 @@
 design/variable/test_A4.pdf
 design/variable/cards_front.pdf
 __pycache__/
+
+# 金鑰與密碼：只放本機，不進 repo
+.env
+.env.*
+!.env.example
