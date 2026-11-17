@@ -56,11 +56,31 @@ def qr_image(svg_name, px):
     return Image.fromarray(dark)
 
 
+def qr_image_from_url(url, px, level="Q"):
+    """直接從網址產生 QR Code 圖（每張名片不同的碼用）。"""
+    from reportlab.graphics.barcode.qrencoder import QRCode, QRErrorCorrectLevel
+    qr = QRCode(None, getattr(QRErrorCorrectLevel, level))
+    qr.addData(url)
+    qr.make()
+    n = qr.getModuleCount()
+    quiet = 2
+    grid = np.full((n + 2 * quiet, n + 2 * quiet), 255, np.uint8)
+    for r in range(n):
+        for c in range(n):
+            if qr.isDark(r, c):
+                grid[r + quiet, c + quiet] = 0
+    img = Image.fromarray(grid).resize((px, px), Image.NEAREST).convert("RGB")
+    a = np.array(img)
+    a[(a == 0).all(2)] = (15, 42, 51)
+    return Image.fromarray(a)
+
+
 def p(v):
     return round(v * S)
 
 
-def front():
+def front(qr_url=None, blank_qr=False):
+    """qr_url：這張名片專屬的網址；blank_qr=True：QR 位置留白（編譯 AR 辨識檔用）。"""
     card = Image.new("RGB", (W, H), "#e9dcc4")
     src = Image.open(HERE / "portrait_source.png").convert("RGB")
     scale = max(W / src.width, H / src.height)
@@ -80,7 +100,12 @@ def front():
     x1, y1 = W - p(22), H - p(22)
     x0, y0 = x1 - tile_w, y1 - tile_h
     d.rounded_rectangle((x0, y0, x1, y1), radius=p(6), fill="white")
-    card.paste(qr_image("qr-ar.svg", qr), (x0 + pad, y0 + pad))
+    if blank_qr:
+        pass                                   # 留白：辨識檔不記這一塊
+    elif qr_url:
+        card.paste(qr_image_from_url(qr_url, qr), (x0 + pad, y0 + pad))
+    else:
+        card.paste(qr_image("qr-ar.svg", qr), (x0 + pad, y0 + pad))
     d.text((x0 + tile_w / 2, y0 + pad + qr + p(4)), label, font=label_font, fill="#10262d", anchor="mt")
     return card
 
@@ -193,4 +218,5 @@ def main():
     print("wrote", out)
 
 
-main()
+if __name__ == "__main__":
+    main()
