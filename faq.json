@@ -3,7 +3,7 @@
   "items": [
     {
       "id": "who",
-      "q": "請問閣下是？",
+      "q": "你好，請問你是哪位？",
       "text": "",
       "audio": "audio/intro.m4a",
       "env": "audio/intro.json",
@@ -24,7 +24,10 @@
       "audio": null,
       "env": null,
       "links": [
-        { "label": "作品集", "url": "https://jpking7055.github.io/mySite/index.html" }
+        {
+          "label": "作品集",
+          "url": "https://jpking7055.github.io/mySite/index.html"
+        }
       ]
     },
     {
@@ -50,8 +53,14 @@
       "audio": null,
       "env": null,
       "links": [
-        { "label": "LinkedIn", "url": "https://www.linkedin.com/in/jpking7055/" },
-        { "label": "作品集", "url": "https://jpking7055.github.io/mySite/index.html" }
+        {
+          "label": "LinkedIn",
+          "url": "https://www.linkedin.com/in/jpking7055/"
+        },
+        {
+          "label": "作品集",
+          "url": "https://jpking7055.github.io/mySite/index.html"
+        }
       ]
     }
   ]
