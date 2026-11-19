@@ -8,7 +8,7 @@
         A4 上排 4 張不同 QR 的正面（實際尺寸、含裁切線），超商印來測 AR 辨識。
     --mode print：design/variable/cards_front.pdf
         給印刷店：每頁一張名片正面（60×96 mm，含 3 mm 出血），每頁 QR 不同。
-        背面每張都一樣，用 design/card_back_print.png。
+        親友卡背面每張都一樣，用 design/card_back_family_print.png（赤陶紅、親友專屬標籤）。
 
 用法：
     python tools/make_variable_cards.py --mode test --count 4

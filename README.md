@@ -35,7 +35,8 @@ design/                    名片與角色的原始素材
   avatar-source/             AI 生成的角色原圖（比 YA 閉嘴／張嘴、雙手平放張嘴）
   qr/                        三個 QR Code（SVG）
   card_front_print.jpg       正面印刷圖（600 dpi，含 3 mm 出血）
-  card_back_print.png        背面印刷圖（600 dpi，含 3 mm 出血）
+  card_back_print.png        一般版背面印刷圖（600 dpi，含 3 mm 出血）
+  card_back_family_print.png 親友版背面印刷圖
   card_print_A4.pdf          A4 測試列印檔（實際尺寸，含裁切線）
   mindar_target_front.png    給 MindAR 編譯用的正面圖（不含出血）
 tools/                     重現素材的腳本
@@ -72,7 +73,11 @@ tools/                     重現素材的腳本
 
 - **尺寸**：直式 54×90 mm，四邊各 3 mm 出血。
 - **正面**：人像鋪滿整面，右下角白底 QR Code（約 2 cm），標示「掃描，跟我聊聊」。人像色塊多、對比強、不對稱，很適合當 AR 辨識目標；QR Code 也會增加特徵點。
-- **背面**：深藍綠底（#13343d）配米色字（#f3e7d3）、橘色強調（#e0814a），色調取自人像。內容：
+- **背面**：米色字（#f3e7d3），色調取自人像，分兩個版本：
+  - **一般版**：森林綠底（#1e3a2b）、金黃強調（#e7b75f），`design/card_back_print.png`
+  - **親友版**：赤陶紅底（#6e3322）、金黃強調（#f2c46d），名字上方加「親友專屬 · FAMILY」標籤，`design/card_back_family_print.png`。親友版正面與一般版相同，只有 QR Code 每張不同（帶專屬碼）。
+
+  內容：
   - 司順瑋 Bernie／互動體驗 × AI 應用開發
   - LinkedIn 與作品集各一個 QR Code，附圖示與短網址
   - 標語：用遊戲設計的思維，打造會回應你的 AI 互動體驗

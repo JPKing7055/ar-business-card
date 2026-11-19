@@ -110,12 +110,28 @@ def front(qr_url=None, blank_qr=False):
     return card
 
 
-def back():
-    ground, text, sub, accent = "#13343d", "#f3e7d3", "#d9cbb3", "#e0814a"
+# 背面配色：一般版（森林綠）與親友版（赤陶紅，加「親友專屬 · FAMILY」標籤）
+VARIANTS = {
+    "public": {"ground": "#1e3a2b", "accent": "#e7b75f", "badge": False},
+    "family": {"ground": "#6e3322", "accent": "#f2c46d", "badge": True},
+}
+
+
+def back(variant="public"):
+    v = VARIANTS[variant]
+    ground, text, sub, accent = v["ground"], "#f3e7d3", "#d9cbb3", v["accent"]
     card = Image.new("RGB", (W, H), ground)
     d = ImageDraw.Draw(card)
     x = p(24)
     y = p(26)
+    if v["badge"]:
+        bf = cjk("Bold", p(9))
+        label = "親友專屬 · FAMILY"
+        bb = d.textbbox((0, 0), label, font=bf)
+        bw, bh = bb[2] - bb[0] + p(14), bb[3] - bb[1] + p(6)
+        d.rounded_rectangle((x, y, x + bw, y + bh), radius=bh // 2, outline=accent, width=max(1, p(1)))
+        d.text((x + bw / 2, y + bh / 2), label, font=bf, fill=accent, anchor="mm")
+        y += bh + p(10)
     name_f = cjk("Bold", p(21))
     d.text((x, y), "司順瑋", font=name_f, fill=text, anchor="la")
     nb = d.textbbox((x, y), "司順瑋", font=name_f, anchor="la")
@@ -181,7 +197,8 @@ def crop_marks(c, x, y, w, h):
 
 
 def main():
-    f, b = front(), back()
+    f, b = front(), back("public")
+    back("family").save(HERE / "card_back_family_print.png", dpi=(DPI, DPI))
     f.save(HERE / "card_front_print.jpg", quality=94, dpi=(DPI, DPI))
     b.save(HERE / "card_back_print.png", dpi=(DPI, DPI))
     # MindAR 辨識圖：裁掉出血 = 裁切後名片看到的範圍
