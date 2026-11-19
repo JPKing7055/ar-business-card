@@ -10,21 +10,41 @@
     /* 不要設背景色：MindAR 的鏡頭畫面在 z-index:-2，body 背景會把它蓋住，畫面就變全黑 */
     html, body { margin: 0; height: 100%; overflow: hidden; }
     body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+    /* ---------- 問答面板（顏色取自名片：森林綠、米色、金黃） ---------- */
     #ui {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-      display: flex; justify-content: center;
-      padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       pointer-events: none;
+      opacity: 0; transform: translateY(16px); transition: opacity .3s, transform .3s;
     }
-    #talk {
-      pointer-events: auto;
-      min-height: 48px; padding: 0 22px; border: 0; border-radius: 24px;
-      background: #e0814a; color: #10262d; font-size: 16px; font-weight: 700;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
-      opacity: 0; transform: translateY(12px); transition: opacity .3s, transform .3s;
+    #ui.show { opacity: 1; transform: none; }
+    #ui.show > * { pointer-events: auto; }
+    #bubble {
+      display: none; max-height: 30vh; overflow-y: auto;
+      padding: 12px 14px; border-radius: 14px;
+      background: rgba(243, 231, 211, .96); color: #1e3a2b;
+      font-size: 15px; line-height: 1.6; box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
     }
-    #talk.show { opacity: 1; transform: none; }
-    #talk:disabled { background: #b9a88f; }
+    #bubble.show { display: block; }
+    #bubble .q { font-weight: 700; margin-bottom: 4px; color: #6e3322; }
+    #bubble .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    #bubble .links a {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+      border-radius: 22px; background: #1e3a2b; color: #f3e7d3;
+      font-size: 15px; font-weight: 700; text-decoration: none;
+    }
+    #faq {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      padding: 10px; border-radius: 16px;
+      background: rgba(30, 58, 43, .9); box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+    }
+    #faq button {
+      min-height: 46px; padding: 6px 10px; border-radius: 12px;
+      border: 1px solid rgba(231, 183, 95, .55); background: rgba(243, 231, 211, .08);
+      color: #f3e7d3; font: inherit; font-size: 15px; font-weight: 600; line-height: 1.3;
+    }
+    #faq button.playing { background: #e7b75f; color: #1e3a2b; border-color: #e7b75f; }
     #debug {
       position: fixed; left: 8px; top: 8px; z-index: 20; display: none;
       padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.7); color: #9f9;
@@ -34,8 +54,9 @@
 </head>
 <body>
   <div id="debug"></div>
-  <div id="ui">
-    <button id="talk" type="button" disabled>👋 跟我打招呼</button>
+  <div id="ui" aria-live="polite">
+    <div id="bubble"></div>
+    <div id="faq" role="group" aria-label="問我問題"></div>
   </div>
 
   <a-scene
@@ -89,12 +110,6 @@
   </a-scene>
 
   <script>
-    // ---------- 備用台詞：錄音無法播放時，用瀏覽器內建語音念這段 ----------
-    const INTRO =
-      '嗨，我是司順瑋，也可以叫我 Bernie。' +
-      '我在做互動體驗和 AI 應用開發，喜歡用遊戲設計的思維，打造會回應你的互動體驗。' +
-      '想看更多作品，可以掃名片背面的 QR Code。';
-
     // ---------- 讓角色站在名片上並轉向觀看者 ----------
     // 名片坐標：+Y = 名片上緣，+Z = 名片正面朝外。
     // - 從正前方看（名片拿起來、或手機在名片正上方）：角色平貼在名片上，頭朝名片上緣，
@@ -149,7 +164,7 @@
     const anchor = document.getElementById('anchor');
     const pop = document.getElementById('pop');
     const dim = document.getElementById('dim');
-    const talkBtn = document.getElementById('talk');
+    const ui = document.getElementById('ui');
 
     // 追蹤偶爾會短暫丟失又找回（光線、反光、手晃）。
     // 丟失時先等 HIDE_DELAY 毫秒，真的找不到才收起角色；在這之內找回就不重播登場。
@@ -165,8 +180,7 @@
       // 保險：萬一動畫沒播，900ms 後直接把角色放到正常大小
       setTimeout(() => { if (shown && pop.object3D.scale.x < 0.5) pop.object3D.scale.set(1, 1, 1); }, 900);
       dim.emit('dimon');
-      talkBtn.disabled = false;
-      talkBtn.classList.add('show');
+      ui.classList.add('show');
       clearTimeout(window.__settle);
       window.__settle = setTimeout(() => { if (!speaking) setPose('idle'); }, 2500);
     }
@@ -175,8 +189,7 @@
       shown = false;
       pop.object3D.scale.set(0.001, 0.001, 0.001);
       dim.emit('dimoff');
-      talkBtn.classList.remove('show');
-      talkBtn.disabled = true;
+      ui.classList.remove('show');
       stopSpeaking();
     }
 
@@ -190,18 +203,27 @@
       hideTimer = setTimeout(hideCharacter, HIDE_DELAY);
     });
 
-    // ---------- 說話：本人錄音 + 嘴巴依音量開合 ----------
-    // audio/intro.m4a 是錄音，audio/intro.json 是預先算好的音量曲線（tools/make_voice.py 產生）。
-    // 用一般的 <audio> 播放，依播放時間查音量決定張嘴或閉嘴。
-    // 錄音載入失敗時，退回瀏覽器內建語音念 INTRO。
+    // ---------- 按鈕問答：faq.json + 本人錄音 + 嘴巴依音量開合 ----------
+    // 每題在 faq.json 裡有：問題、字幕文字、音檔（audio）、嘴型音量曲線（env）、相關連結。
+    // 有音檔就播放並依播放時間查音量開合嘴巴；還沒錄音的題目只顯示字幕。
+    // 音量曲線由 tools/make_voice.py 產生；用一般的 <audio> 播放，不受 iPhone 靜音開關影響。
     let speaking = false;
-    let flap = null;
     let raf = 0;
-    const voice = new Audio('./audio/intro.m4a');
+    let current = null;          // 目前播放的題目
+    const voice = new Audio();
     voice.preload = 'auto';
     voice.setAttribute('playsinline', '');
+    const envCache = {};
     let envelope = null;
-    fetch('./audio/intro.json').then(r => r.ok ? r.json() : null).then(d => { envelope = d; }).catch(() => {});
+    const bubble = document.getElementById('bubble');
+    const faqBox = document.getElementById('faq');
+
+    function loadEnvelope(url) {
+      if (!url) return Promise.resolve(null);
+      if (envCache[url]) return Promise.resolve(envCache[url]);
+      return fetch(url).then(r => r.ok ? r.json() : null)
+        .then(d => (envCache[url] = d)).catch(() => null);
+    }
 
     function mouthLoop() {
       if (!speaking) return;
@@ -214,45 +236,75 @@
       raf = requestAnimationFrame(mouthLoop);
     }
 
+    function markPlaying(id) {
+      faqBox.querySelectorAll('button').forEach(b => b.classList.toggle('playing', b.dataset.id === id));
+    }
+
     function stopSpeaking() {
       speaking = false;
       cancelAnimationFrame(raf);
-      clearInterval(flap);
       voice.pause();
-      if ('speechSynthesis' in window) speechSynthesis.cancel();
       setPose('idle');
-      talkBtn.textContent = '👋 跟我打招呼';
+      markPlaying(null);
     }
 
-    function startSpeaking() {
-      speaking = true;
-      talkBtn.textContent = '■ 停止';
+    function showBubble(item) {
+      bubble.textContent = '';
+      const q = document.createElement('div');
+      q.className = 'q';
+      q.textContent = item.q;
+      bubble.appendChild(q);
+      if (item.text) {
+        const t = document.createElement('div');
+        t.textContent = item.text;
+        bubble.appendChild(t);
+      }
+      if (item.links && item.links.length) {
+        const box = document.createElement('div');
+        box.className = 'links';
+        item.links.forEach(l => {
+          const a = document.createElement('a');
+          a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+          a.textContent = l.label;
+          box.appendChild(a);
+        });
+        bubble.appendChild(box);
+      }
+      bubble.classList.add('show');
+      bubble.scrollTop = 0;
     }
 
-    function speakFallback() {
-      if (!('speechSynthesis' in window)) { stopSpeaking(); return; }
-      const u = new SpeechSynthesisUtterance(INTRO);
-      u.lang = 'zh-TW';
-      u.rate = 1.05;
-      u.onstart = () => {
-        startSpeaking();
-        let open = false;
-        clearInterval(flap);
-        flap = setInterval(() => { open = !open; setPose(open ? 'talking' : 'idle'); }, 160);
-      };
-      u.onend = u.onerror = () => stopSpeaking();
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
+    function answer(item) {
+      // 再按一次同一題 = 停止
+      if (speaking && current === item) { stopSpeaking(); return; }
+      stopSpeaking();
+      current = item;
+      showBubble(item);
+      if (!item.audio) { setPose('greet'); setTimeout(() => { if (!speaking) setPose('idle'); }, 1500); return; }
+      envelope = envCache[item.env] || null;
+      loadEnvelope(item.env).then(d => { if (current === item) envelope = d; });
+      voice.src = item.audio;
+      voice.currentTime = 0;
+      // iPhone 規定聲音要在點擊當下開始播放，所以這裡直接 play()，不等音量曲線載入
+      voice.play()
+        .then(() => { speaking = true; markPlaying(item.id); mouthLoop(); })
+        .catch(() => { speaking = false; });
     }
 
     voice.addEventListener('ended', stopSpeaking);
 
-    talkBtn.addEventListener('click', () => {
-      if (speaking) { stopSpeaking(); return; }
-      voice.currentTime = 0;
-      voice.play()
-        .then(() => { startSpeaking(); mouthLoop(); })
-        .catch(() => speakFallback());
+    fetch('./faq.json').then(r => r.json()).then(data => {
+      data.items.forEach(item => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.id = item.id;
+        b.textContent = item.q;
+        b.addEventListener('click', () => answer(item));
+        faqBox.appendChild(b);
+        if (item.env) loadEnvelope(item.env);    // 先載入音量曲線
+      });
+    }).catch(() => {
+      faqBox.textContent = '問題清單載入失敗，請重新整理頁面';
     });
     // ---------- 除錯資訊：網址加上 ?debug=1 ----------
     if (new URLSearchParams(location.search).has('debug')) {

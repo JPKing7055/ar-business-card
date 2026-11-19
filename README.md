@@ -1,11 +1,13 @@
 # AR 互動名片｜司順瑋 Bernie
 
-用手機掃描名片，名片上的低多邊形人像會「站起來」，跟你打招呼、自我介紹。
+用手機掃描名片，名片上的低多邊形人像會「站起來」跟你打招呼，點選問題就會用本人的聲音回答。
 
 - 線上版：https://jpking7055.github.io/ar-business-card/
 - 技術：[MindAR](https://hiukim.github.io/mind-ar-js-doc/)（圖片追蹤）＋ A-Frame（three.js）
-- 目前進度：第一階段（純前端、GitHub Pages）。角色播放本人錄音自我介紹，嘴型依音量開合。
-- 下一階段：接上 Gemini Live，讓角色可以即時語音對話。
+- 目前進度：按鈕問答（純前端、GitHub Pages）。點選問題，角色播放本人語音回答並顯示字幕，嘴型依音量開合。
+- 規劃中：
+  - 本機用 RAG＋AI 產生回答文案、GPT-SoVITS 合成本人聲音，更新按鈕問答的內容（名片不用重印）。
+  - 管理者（本人展示用）與親友專屬碼可使用即時自由問答，親友碼有每日上限、可單獨停用，並有總開關。
 
 | 正面（AR 辨識） | 背面（聯絡資訊） |
 | --- | --- |
@@ -16,7 +18,7 @@
 1. 用手機相機掃名片正面的 QR Code。
 2. 開啟網頁、允許使用鏡頭。
 3. 把鏡頭對準名片正面，角色會從名片上彈出來。
-4. 按「跟我打招呼」，角色會用本人的聲音自我介紹。
+4. 點選畫面下方的問題，角色會回答並顯示字幕；再按一次同一題可以停止。
 
 正面 QR Code 先連到 `jpking7055.github.io/mySite/card.html`，再轉到這個專案。AR 網頁換網址時只要改那一頁，已經發出去的名片不用重印。
 
@@ -24,7 +26,8 @@
 
 ```
 index.html                 AR 頁面（MindAR + A-Frame）
-targets.mind               名片正面的辨識檔
+targets.mind               名片正面的辨識檔（QR 位置留白，一般版與親友版共用）
+faq.json                   按鈕問答的題目、字幕、音檔與連結
 avatar/                    角色狀態圖（網頁用，WebP）
 audio/
   intro.m4a                  自我介紹錄音（已裁切、音量標準化）
@@ -38,7 +41,7 @@ design/                    名片與角色的原始素材
   card_back_print.png        一般版背面印刷圖（600 dpi，含 3 mm 出血）
   card_back_family_print.png 親友版背面印刷圖
   card_print_A4.pdf          A4 測試列印檔（實際尺寸，含裁切線）
-  mindar_target_front.png    給 MindAR 編譯用的正面圖（不含出血）
+  mindar_target_front.png    給 MindAR 編譯用的正面圖（不含出血、QR 位置留白）
 tools/                     重現素材的腳本
   make_qr.py                 產生 QR Code
   build_avatar.py            角色圖對齊、補嘴型、去背、輸出 WebP
@@ -93,8 +96,10 @@ tools/                     重現素材的腳本
 ### 5. AR 辨識檔
 
 1. 用裁掉出血的正面圖 `design/mindar_target_front.png`（600×1000 px，與裁切後的名片範圍一致）。
-2. 上傳到 [MindAR Image Targets Compiler](https://hiukim.github.io/mind-ar-js-doc/tools/compile)，確認特徵點分布均勻（臉、襯衫、手、QR Code 都有）。
+2. 上傳到 [MindAR Image Targets Compiler](https://hiukim.github.io/mind-ar-js-doc/tools/compile)，確認特徵點分布均勻（臉、襯衫、手都有）。
 3. 下載 `targets.mind`，放在專案根目錄。
+
+辨識圖的 QR Code 位置是留白的：辨識檔不記那一塊，所以一般版（固定 QR）和親友版（每張不同 QR）都能用同一個 `targets.mind`。實測過 4 張不同 QR 的名片都能穩定辨識。
 
 名片正面設計有任何修改，都要重新產生辨識圖並重新編譯。
 
@@ -107,11 +112,12 @@ tools/                     重現素材的腳本
   - 腳下有一圈半透明陰影。
 - **重新辨識**：登場動畫用事件觸發，名片移出畫面再移回來時會重播。
 - **登場**：辨識到名片時，人像變暗、角色彈出（greet），約 2.5 秒後換成待機（idle）。名片移出畫面時角色消失。
-- **說話**：按鈕播放本人錄音 `audio/intro.m4a`，依播放時間查 `audio/intro.json` 的音量：有聲音時每 80ms 開合一次，停頓時閉嘴。iPhone 必須由使用者點擊後才能播放聲音，所以做成按鈕。錄音無法播放時，退回瀏覽器內建語音念 `INTRO`。
+- **按鈕問答**：題目來自 `faq.json`，辨識到名片時出現在畫面下方。點選後顯示字幕（和相關連結），有音檔的題目播放本人語音，依 `env` 音量曲線開合嘴巴：有聲音時每 80ms 開合一次，停頓時閉嘴。還沒錄音的題目只顯示字幕。iPhone 必須由使用者點擊後才能播放聲音，所以做成按鈕。
+- **更新問答**：修改 `faq.json` 的文字，或用 `tools/make_voice.py` 產生新的音檔與音量曲線並填入 `audio`、`env`，推上 GitHub 即可，已發出的名片不用重印。
 - **為什麼預先算音量**：iPhone 上把聲音接進 Web Audio 即時分析，會受靜音開關影響而沒有聲音；預先算好就能用一般的 `<audio>` 播放。
 - **除錯**：網址加上 `?debug=1`，左上角顯示顯示狀態、縮放、站立／轉向角度、姿勢與圖片載入狀態，角色位置會有洋紅色小方塊。
 - **防抖**：`filterMinCF: 0.0001; filterBeta: 0.001`，減少追蹤抖動。
-- 換錄音：`python tools/make_voice.py 新錄音.m4a`，會自動裁掉前後空白、標準化音量，並重算音量曲線。
+- 換錄音：`python tools/make_voice.py 錄音.m4a faq/skills`，會自動裁掉前後空白、標準化音量，並算出音量曲線，輸出到 `audio/faq/skills.m4a`、`.json`（不給名稱時輸出 `audio/intro.*`）。
 
 ### 7. 部署
 

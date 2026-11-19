@@ -1,9 +1,8 @@
 """每張名片正面放不同的 QR Code（可變資料印刷）。
 
 產生：
-    design/variable/mindar_target_front_blankqr.png
-        QR Code 位置留白的正面圖，拿去 MindAR Compiler 編譯 targets.mind。
-        辨識檔不記 QR 那一塊，每張名片印不同的 QR 也不會跟辨識檔衝突。
+    （AR 辨識圖由 render_print.py 產生：design/mindar_target_front.png，QR 位置留白，
+     一般版與每張不同 QR 的親友版共用同一個 targets.mind。）
     --mode test：design/variable/test_A4.pdf
         A4 上排 4 張不同 QR 的正面（實際尺寸、含裁切線），超商印來測 AR 辨識。
     --mode print：design/variable/cards_front.pdf
@@ -47,15 +46,6 @@ def check_qr(img, expected):
     found = list(decoded) if ok else []
     if expected not in found:
         raise RuntimeError(f"QR 解碼失敗：預期 {expected}，讀到 {found}")
-
-
-def target_image():
-    bl = round(rp.BLEED_MM / 25.4 * rp.DPI)
-    f = rp.front(blank_qr=True)
-    f = f.crop((bl, bl, rp.W - bl, rp.H - bl)).resize((600, 1000), Image.LANCZOS)
-    path = OUT / "mindar_target_front_blankqr.png"
-    f.save(path, optimize=True)
-    print("wrote", path)
 
 
 def render_cards(codes):
@@ -119,7 +109,6 @@ def main():
     args = ap.parse_args()
 
     OUT.mkdir(exist_ok=True)
-    target_image()
     if args.mode == "test":
         codes = [random_code() for _ in range(min(args.count, 4))]
         test_pdf(render_cards(codes))

@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "who",
+      "q": "請問閣下是？",
+      "text": "",
+      "audio": "audio/intro.m4a",
+      "env": "audio/intro.json",
+      "links": []
+    },
+    {
+      "id": "skills",
+      "q": "你擅長什麼？",
+      "text": "我擅長把 AI 技術做成可以實際互動的體驗，像是即時語音對話的角色、AR 互動，還有結合 RAG 的知識問答。我習慣從使用者的角度出發，用遊戲設計的方法，讓體驗更自然、也更好玩。",
+      "audio": null,
+      "env": null,
+      "links": []
+    },
+    {
+      "id": "projects",
+      "q": "你做過哪些專案？",
+      "text": "你手上這張 AR 互動名片就是其中之一。其他還有用 Gemini Live 做的多模態語音助理、AI 互動角色 Lumi、即時口譯耳機 LinguaLink，以及能把日常片段變成小歌劇配樂的 Life-BGM。更多作品可以到我的作品集看看。",
+      "audio": null,
+      "env": null,
+      "links": [
+        { "label": "作品集", "url": "https://jpking7055.github.io/mySite/index.html" }
+      ]
+    },
+    {
+      "id": "tools",
+      "q": "使用哪些技術、工具？",
+      "text": "程式語言主要用 Python 和 JavaScript，也會寫 C#。AI 方面常用 Gemini，包含即時語音的 Gemini Live，也做過 Ollama 本地模型和 RAG。AR 用 MindAR 和 A-Frame，也在學 Unity 的 AR Foundation。開發時會搭配 Google AI Studio、GitHub 和 AI 程式助理。",
+      "audio": null,
+      "env": null,
+      "links": []
+    },
+    {
+      "id": "services",
+      "q": "能提供什麼服務？",
+      "text": "我可以把你的想法快速做成能實際操作的原型，例如 AI 互動角色、語音助理、AR 體驗，或是把文件資料做成 AI 問答。也很適合遊戲化的教育和行銷互動。歡迎跟我聊聊你的需求。",
+      "audio": null,
+      "env": null,
+      "links": []
+    },
+    {
+      "id": "contact",
+      "q": "怎麼聯絡你？",
+      "text": "最方便的方式是透過 LinkedIn 聯絡我，名片背面也有 QR Code。想先了解我的作品，可以到我的作品集網站。",
+      "audio": null,
+      "env": null,
+      "links": [
+        { "label": "LinkedIn", "url": "https://www.linkedin.com/in/jpking7055/" },
+        { "label": "作品集", "url": "https://jpking7055.github.io/mySite/index.html" }
+      ]
+    }
+  ]
+}

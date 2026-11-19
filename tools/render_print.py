@@ -203,7 +203,9 @@ def main():
     b.save(HERE / "card_back_print.png", dpi=(DPI, DPI))
     # MindAR 辨識圖：裁掉出血 = 裁切後名片看到的範圍
     bl = round(BLEED_MM / 25.4 * DPI)
-    f.crop((bl, bl, W - bl, H - bl)).resize((600, 1000), Image.LANCZOS).save(HERE / "mindar_target_front.png", optimize=True)
+    # QR 位置留白：一般版、親友版（每張不同 QR）都能用同一個辨識檔
+    front(blank_qr=True).crop((bl, bl, W - bl, H - bl)).resize((600, 1000), Image.LANCZOS).save(
+        HERE / "mindar_target_front.png", optimize=True)
     # QR self-check on the rendered card
     det = cv2.QRCodeDetector()
     for name in ("card_front_print.jpg", "card_back_print.png"):
