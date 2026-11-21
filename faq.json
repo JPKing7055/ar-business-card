@@ -4,7 +4,7 @@
     {
       "id": "who",
       "q": "你好，請問你是哪位？",
-      "text": "",
+      "text": "您好，我的名字是司順瑋，在軟體產業已有十年工作經驗，現在在做 AI 技術類的應用開發與服務。",
       "audio": "audio/intro.m4a",
       "env": "audio/intro.json",
       "links": []
