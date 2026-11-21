@@ -47,6 +47,9 @@ tools/                     重現素材的腳本
   build_avatar.py            角色圖對齊、補嘴型、去背、輸出 WebP
   render_print.py            產生印刷圖、A4 PDF、MindAR 辨識圖
   make_voice.py              錄音裁切、標準化，並算出嘴型音量曲線
+  synth_faq.py               用本機 GPT-SoVITS 把 faq.json 字幕批次合成成本人聲音
+docs/
+  voice-training.md          GPT-SoVITS 安裝、錄音稿、訓練與批次合成步驟
 ```
 
 ## 製作流程
@@ -113,6 +116,7 @@ tools/                     重現素材的腳本
 - **重新辨識**：登場動畫用事件觸發，名片移出畫面再移回來時會重播。
 - **登場**：辨識到名片時，人像變暗、角色彈出（greet），約 2.5 秒後換成待機（idle）。名片移出畫面時角色消失。
 - **按鈕問答**：題目來自 `faq.json`，辨識到名片時出現在畫面下方。點選後顯示字幕（和相關連結），有音檔的題目播放本人語音，依 `env` 音量曲線開合嘴巴：有聲音時每 80ms 開合一次，停頓時閉嘴。還沒錄音的題目只顯示字幕。iPhone 必須由使用者點擊後才能播放聲音，所以做成按鈕。
+- **本人聲音合成**：用 GPT-SoVITS 訓練本人聲音後，`tools/synth_faq.py` 會把還沒有音檔的題目批次合成並寫回 `faq.json`，詳見 [docs/voice-training.md](docs/voice-training.md)。
 - **更新問答**：修改 `faq.json` 的文字，或用 `tools/make_voice.py` 產生新的音檔與音量曲線並填入 `audio`、`env`，推上 GitHub 即可，已發出的名片不用重印。
 - **為什麼預先算音量**：iPhone 上把聲音接進 Web Audio 即時分析，會受靜音開關影響而沒有聲音；預先算好就能用一般的 `<audio>` 播放。
 - **除錯**：網址加上 `?debug=1`，左上角顯示顯示狀態、縮放、站立／轉向角度、姿勢與圖片載入狀態，角色位置會有洋紅色小方塊。
