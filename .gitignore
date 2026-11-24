@@ -9,3 +9,24 @@ __pycache__/
 
 # Python 虛擬環境
 .venv/
+
+# 私人資料（履歷、作品集簡報等）：只放本機
+private/
+
+# 聲音與模型：拿到就能用你的聲音說話，絕不進 repo
+*.wav
+*.ckpt
+*.pth
+voice-data/
+
+# 系統與編輯器產生的檔案
+.vscode/
+Thumbs.db
+desktop.ini
+# 原始錄音與親友卡檔案：只放本機
+design/avatar-source/*.m4a
+design/variable/
+
+# 原始錄音與親友卡檔案：只放本機
+design/avatar-source/*.m4a
+design/variable/

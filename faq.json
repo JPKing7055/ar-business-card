@@ -13,16 +13,16 @@
       "id": "skills",
       "q": "你擅長什麼？",
       "text": "以遊戲軟體開發為例，我具備產品開發規劃、玩法內容設計，以及玩感、視覺與操作體驗優化的經驗，也能搭配 AI 技術，快速做出產品原型，並透過測試持續打磨。",
-      "audio": null,
-      "env": null,
+      "audio": "audio/faq/skills.m4a",
+      "env": "audio/faq/skills.json",
       "links": []
     },
     {
       "id": "projects",
       "q": "你做過哪些專案？",
       "text": "我做過七到十人開發規模的維運型手遊、類似魔獸世界的線上遊戲代理營運，也在二十到四十人規模的專案中協助專案管理，輔助開發團隊從立項到產品上線。自己試做的專案，則有多模態 AI 助理、本機端的 AI 生圖與影片、手機端的對話 AI 助理，以及運用 RAG 技術的 AR 名片。",
-      "audio": null,
-      "env": null,
+      "audio": "audio/faq/projects.m4a",
+      "env": "audio/faq/projects.json",
       "links": [
         {
           "label": "作品集",
@@ -34,24 +34,24 @@
       "id": "tools",
       "q": "使用哪些技術、工具？",
       "text": "我主要和市場主流的 AI 工具協作開發，以 Python 和網頁技術實作，也能依照不同專案的需求，運用額外的技術和工具進行開發。",
-      "audio": null,
-      "env": null,
+      "audio": "audio/faq/tools.m4a",
+      "env": "audio/faq/tools.json",
       "links": []
     },
     {
       "id": "services",
       "q": "能提供什麼服務？",
       "text": "我能提供應用軟體的想法整合、規劃管理、內容設計、原型開發和產品測試，也能從互動性、市場面和商業化的角度，提供調整建議。",
-      "audio": null,
-      "env": null,
+      "audio": "audio/faq/services.m4a",
+      "env": "audio/faq/services.json",
       "links": []
     },
     {
       "id": "contact",
       "q": "怎麼聯絡你？",
       "text": "最方便的方式是透過 LinkedIn 聯絡我，名片背面也有 QR Code。想先了解我的作品，可以到我的作品集網站。",
-      "audio": null,
-      "env": null,
+      "audio": "audio/faq/contact.m4a",
+      "env": "audio/faq/contact.json",
       "links": [
         {
           "label": "LinkedIn",
