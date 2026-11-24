@@ -13,36 +13,37 @@
     /* ---------- 問答面板（顏色取自名片：森林綠、米色、金黃） ---------- */
     #ui {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-      display: flex; flex-direction: column; gap: 10px;
-      padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
       pointer-events: none;
       opacity: 0; transform: translateY(16px); transition: opacity .3s, transform .3s;
     }
     #ui.show { opacity: 1; transform: none; }
     #ui.show > * { pointer-events: auto; }
     #bubble {
-      display: none; max-height: 30vh; overflow-y: auto;
-      padding: 12px 14px; border-radius: 14px;
-      background: rgba(243, 231, 211, .96); color: #1e3a2b;
-      font-size: 15px; line-height: 1.6; box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+      display: none; max-height: 22vh; overflow-y: auto;
+      padding: 8px 12px; border-radius: 12px;
+      background: rgba(243, 231, 211, .92); color: #1e3a2b;
+      font-size: 14px; line-height: 1.5; box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
     }
+    #bubble .more { margin-top: 2px; font-size: 12px; color: #6e3322; opacity: .8; }
     #bubble.show { display: block; }
-    #bubble .q { font-weight: 700; margin-bottom: 4px; color: #6e3322; }
-    #bubble .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    #bubble .q { font-size: 12px; font-weight: 700; margin-bottom: 2px; color: #6e3322; }
+    #bubble .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
     #bubble .links a {
-      display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
-      border-radius: 22px; background: #1e3a2b; color: #f3e7d3;
-      font-size: 15px; font-weight: 700; text-decoration: none;
+      display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px;
+      border-radius: 18px; background: #1e3a2b; color: #f3e7d3;
+      font-size: 13px; font-weight: 700; text-decoration: none;
     }
     #faq {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-      padding: 10px; border-radius: 16px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      padding: 8px; border-radius: 14px;
       background: rgba(30, 58, 43, .9); box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
     }
     #faq button {
-      min-height: 46px; padding: 6px 10px; border-radius: 12px;
+      min-height: 40px; padding: 4px 6px; border-radius: 10px;
       border: 1px solid rgba(231, 183, 95, .55); background: rgba(243, 231, 211, .08);
-      color: #f3e7d3; font: inherit; font-size: 15px; font-weight: 600; line-height: 1.3;
+      color: #f3e7d3; font: inherit; font-size: 13px; font-weight: 600; line-height: 1.3;
     }
     #faq button.playing { background: #e7b75f; color: #1e3a2b; border-color: #e7b75f; }
     #debug {
@@ -233,6 +234,7 @@
       // 有聲音時每 2 格（約 80ms）開合一次；停頓時閉嘴
       const open = v > 0.3 && Math.floor(f / 2) % 2 === 0;
       setPose(open ? 'talking' : 'idle');
+      updateLine();
       raf = requestAnimationFrame(mouthLoop);
     }
 
@@ -248,41 +250,112 @@
       markPlaying(null);
     }
 
-    function showBubble(item) {
+    // ---------- 字幕：播放時一次只顯示一句，播完收起來（點字幕可展開全文） ----------
+    let lines = [], lineIdx = -1, lineText = null, voicedCum = null;
+
+    function splitLines(text) {
+      const out = [];
+      (text.match(/[^。！？!?；]+[。！？!?；]*/g) || [text]).forEach(sent => {
+        sent = sent.trim();
+        if (!sent) return;
+        if (sent.length <= 24) { out.push(sent); return; }
+        // 太長的句子再從逗號切開，每段盡量不超過 24 字
+        let buf = '';
+        (sent.match(/[^，,、]+[，,、]*/g) || [sent]).forEach(part => {
+          if (buf && (buf + part).length > 24) { out.push(buf); buf = ''; }
+          buf += part;
+        });
+        if (buf) out.push(buf);
+      });
+      return out;
+    }
+
+    // 依音量曲線算「累計有聲時間」，讓字幕跟著實際說話進度走，停頓時不會往前跳
+    function buildVoiced(env) {
+      if (!env || !env.env) return null;
+      let sum = 0;
+      return env.env.map(v => (sum += v > 0.15 ? 1 : 0));
+    }
+
+    function addLinks(item) {
+      if (!item.links || !item.links.length) return;
+      const box = document.createElement('div');
+      box.className = 'links';
+      item.links.forEach(l => {
+        const a = document.createElement('a');
+        a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = l.label;
+        box.appendChild(a);
+      });
+      bubble.appendChild(box);
+    }
+
+    function renderBubble(item, mode) {
+      // mode: 'line' 播放中逐句、'full' 全文、'done' 播完只留題目與連結
       bubble.textContent = '';
       const q = document.createElement('div');
       q.className = 'q';
       q.textContent = item.q;
       bubble.appendChild(q);
-      if (item.text) {
+      lineText = null;
+      if (mode === 'line') {
+        lineText = document.createElement('div');
+        bubble.appendChild(lineText);
+      } else if (mode === 'full' && item.text) {
         const t = document.createElement('div');
         t.textContent = item.text;
         bubble.appendChild(t);
+      } else if (mode === 'done' && item.text) {
+        const m = document.createElement('div');
+        m.className = 'more';
+        m.textContent = '點這裡看完整回答';
+        bubble.appendChild(m);
       }
-      if (item.links && item.links.length) {
-        const box = document.createElement('div');
-        box.className = 'links';
-        item.links.forEach(l => {
-          const a = document.createElement('a');
-          a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
-          a.textContent = l.label;
-          box.appendChild(a);
-        });
-        bubble.appendChild(box);
-      }
+      if (mode !== 'line') addLinks(item);
+      bubble.dataset.mode = mode;
       bubble.classList.add('show');
       bubble.scrollTop = 0;
     }
 
+    function updateLine() {
+      if (!lineText || !lines.length) return;
+      let p;
+      const frameMs = envelope ? envelope.frameMs : 40;
+      if (voicedCum && voicedCum.length) {
+        const f = Math.min(voicedCum.length - 1, Math.floor(voice.currentTime * 1000 / frameMs));
+        p = voicedCum[f] / Math.max(1, voicedCum[voicedCum.length - 1]);
+      } else {
+        p = voice.duration ? voice.currentTime / voice.duration : 0;
+      }
+      // 以字數比例分配每一句的時間
+      const total = lines.reduce((a, l) => a + l.length, 0);
+      let acc = 0, idx = lines.length - 1;
+      for (let i = 0; i < lines.length; i++) {
+        acc += lines[i].length;
+        if (p < acc / total) { idx = i; break; }
+      }
+      if (idx !== lineIdx) { lineIdx = idx; lineText.textContent = lines[idx]; }
+    }
+
+    bubble.addEventListener('click', e => {
+      if (!current || e.target.closest('a')) return;
+      if (bubble.dataset.mode === 'done') renderBubble(current, 'full');
+      else if (bubble.dataset.mode === 'full' && current.audio) renderBubble(current, 'done');
+    });
+
     function answer(item) {
       // 再按一次同一題 = 停止
-      if (speaking && current === item) { stopSpeaking(); return; }
+      if (speaking && current === item) { stopSpeaking(); renderBubble(item, 'done'); return; }
       stopSpeaking();
       current = item;
-      showBubble(item);
-      if (!item.audio) { setPose('greet'); setTimeout(() => { if (!speaking) setPose('idle'); }, 1500); return; }
+      if (!item.audio) { renderBubble(item, 'full'); setPose('greet'); setTimeout(() => { if (!speaking) setPose('idle'); }, 1500); return; }
       envelope = envCache[item.env] || null;
-      loadEnvelope(item.env).then(d => { if (current === item) envelope = d; });
+      voicedCum = buildVoiced(envelope);
+      lines = splitLines(item.text || '');
+      lineIdx = -1;
+      renderBubble(item, 'line');
+      updateLine();
+      loadEnvelope(item.env).then(d => { if (current === item) { envelope = d; voicedCum = buildVoiced(d); } });
       voice.src = item.audio;
       voice.currentTime = 0;
       // iPhone 規定聲音要在點擊當下開始播放，所以這裡直接 play()，不等音量曲線載入
@@ -291,7 +364,10 @@
         .catch(() => { speaking = false; });
     }
 
-    voice.addEventListener('ended', stopSpeaking);
+    voice.addEventListener('ended', () => {
+      stopSpeaking();
+      if (current) renderBubble(current, 'done');
+    });
 
     fetch('./faq.json').then(r => r.json()).then(data => {
       data.items.forEach(item => {
