@@ -1,7 +1,8 @@
 """用本機的 GPT-SoVITS 把 faq.json 的字幕合成成你的聲音，並更新 faq.json。
 
 流程（每一題）：
-    faq.json 的 text → GPT-SoVITS API（api_v2.py）合成 wav
+    faq.json 的 text（若有 say 欄位則念 say）→ GPT-SoVITS API（api_v2.py）合成 wav
+    say：只影響發音、不影響字幕，用來修正英文縮寫或數字的念法
     → make_voice.process()：裁空白、音量標準化、輸出 m4a 與嘴型音量曲線
     → 寫回 faq.json 的 audio、env
 
@@ -101,7 +102,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         for item in todo:
             t0 = time.time()
-            wav = synth(args.api, item["text"], args.ref, args.ref_text, args.speed)
+            wav = synth(args.api, item.get("say") or item["text"], args.ref, args.ref_text, args.speed)
             raw = Path(tmp) / f"{item['id']}.wav"
             raw.write_bytes(wav)
             print(f"{item['id']}：合成 {time.time() - t0:.1f} 秒")
